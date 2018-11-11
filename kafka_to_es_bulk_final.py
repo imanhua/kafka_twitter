@@ -1,27 +1,33 @@
 from datetime import datetime
 import json
-from elasticsearch import Elasticsearch,helpers
+from elasticsearch import Elasticsearch, helpers
 from kafka import KafkaConsumer
 import readconfig
 
-BOOTSTRAP_SERVERS = 'localhost:9092'
-TOPICS = 'otravo_twitter_stream_test'
-INDEX_NAME = "otravo_test"
-DOC_TYPE = "assignment"
+kafka_config = readconfig.read_config('kafka_config')
+bootstrap_servers = kafka_config['bootstrap_servers']
+# # watch out! This has to be the filtered topic name
+topics = kafka_config['filtered_topics']
+
+es_config = readconfig.read_config('es_config')
+index_name = es_config['index_name']
+# index_name = "otravo_test"
+doc_type = es_config['doc_type']
+
 MAX_POLL_RECORDS = 500
 CONSUMER_TIMEOUT_MS = 60 * 60 * 1000
 
-consumer = KafkaConsumer(TOPICS, bootstrap_servers=BOOTSTRAP_SERVERS, auto_offset_reset='earliest',
+consumer = KafkaConsumer(topics, bootstrap_servers=bootstrap_servers, auto_offset_reset='earliest',
                          enable_auto_commit='False',
                          consumer_timeout_ms=CONSUMER_TIMEOUT_MS)
 
 
 def connect_to_es(config):
 
-    es_config = readconfig.read_config(config)
-    api_endpoints = es_config['api_endpoints']
-    user_name = es_config['user_name']
-    password = es_config['password']
+    es_config_inner = readconfig.read_config(config)
+    api_endpoints = es_config_inner['api_endpoints']
+    user_name = es_config_inner['user_name']
+    password = es_config_inner['password']
     # print(api_endpoints, user_name, password)
     es = Elasticsearch([api_endpoints],
                        http_auth=[user_name, password],
@@ -31,7 +37,7 @@ def connect_to_es(config):
 
 
 def drop_index():
-    es.indices.delete(index=INDEX_NAME, ignore=[400, 404])
+    es.indices.delete(index=index_name, ignore=[400, 404])
     print('%s index dropped ' % datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'))
 
 
@@ -53,7 +59,7 @@ def create_index():
         }
       }
     }'''
-    es.indices.create(index=INDEX_NAME, ignore=400, body=doc)
+    es.indices.create(index=index_name, ignore=400, body=doc)
     print('%s index created ' % datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'))
 
 
@@ -70,10 +76,7 @@ def get_message():
 
         msg['@created_at_2'] = datetime.strptime(to_date_type.strftime('%Y-%m-%d %H:%M:%S'),'%Y-%m-%d %H:%M:%S')
 
-        # msg['@created_at_2'] = to_date_type.strftime('%Y-%m-%d %H:%M:%S')
-        print(msg['@created_at_2'], type(msg['@created_at_2']))
-
-        print(esid, msg)
+        # print(esid, msg)
         import_list.append(msg)
         if esid % MAX_POLL_RECORDS == 0:
             print('%s received in total %d records ' % (datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'), esid))
@@ -92,7 +95,7 @@ def get_message():
 
 def bulk_insert_to_es(esid, msg):
     # es.index(index=INDEX_NAME, doc_type= DOC_TYPE, id=esid, body=msg)
-    helpers.bulk(es, msg, index=INDEX_NAME, doc_type=DOC_TYPE)
+    helpers.bulk(es, msg, index=index_name, doc_type=doc_type)
     print('%s %d record inserted ' % (datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'), len(msg)))
 
 
@@ -101,3 +104,4 @@ if __name__ == '__main__':
     drop_index()
     create_index()
     get_message()
+

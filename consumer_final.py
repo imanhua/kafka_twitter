@@ -1,33 +1,33 @@
-
 import sys
 import logging
 import json
 from kafka import KafkaConsumer, KafkaProducer
 from textblob import TextBlob
 import pycountry
+import readconfig
 
-BOOTSTRAP_SERVERS = 'localhost:9092'
-TOPICS = 'otravo_twitter_stream'
-TOPICS_OUTPUT = 'otravo_twitter_stream_output'
+kafka_config = readconfig.read_config('kafka_config')
+bootstrap_servers = kafka_config['bootstrap_servers']
+topics = kafka_config['topics']
+topics_output = kafka_config['filtered_topics']
+# topics_output = 'otravo_twitter_stream_test'
 MAX_POLL_RECORDS = 500
 CONSUMER_TIMEOUT_MS = 60 * 60 * 1000  # stop if no message after 1 hr
 
-tweets_return = []
-
-consumer = KafkaConsumer(TOPICS,
-                         bootstrap_servers=BOOTSTRAP_SERVERS,
+consumer = KafkaConsumer(topics,
+                         bootstrap_servers=bootstrap_servers,
                          enable_auto_commit='False',
                          auto_offset_reset='earliest',
+                         max_poll_records=MAX_POLL_RECORDS,
                          consumer_timeout_ms=CONSUMER_TIMEOUT_MS)
 
-producer = KafkaProducer(bootstrap_servers=BOOTSTRAP_SERVERS,
+producer = KafkaProducer(bootstrap_servers=bootstrap_servers,
                          acks='all',
                          retries=sys.maxsize,
                          max_in_flight_requests_per_connection=1,
                          linger_ms=5,
                          compression_type='gzip',
-                         value_serializer=lambda m: json.dumps(m).encode('ascii')
-                         )
+                         value_serializer=lambda m: json.dumps(m).encode('ascii'))
 
 
 class TwitterProcess(object):
@@ -48,6 +48,7 @@ class TwitterProcess(object):
 
         try:
 
+            tweets_return = []
             count = 0
             for message in consumer:
                 parsed_tweet = {}
@@ -82,7 +83,7 @@ class TwitterProcess(object):
                 tweets_return.append(parsed_tweet)
 
                 # send messages
-                producer.send(TOPICS_OUTPUT, value=parsed_tweet, key=bytes(message.partition))
+                producer.send(topics_output, value=parsed_tweet, key=bytes(message.partition))
 
                 # manual commit
                 if count % MAX_POLL_RECORDS == 0:

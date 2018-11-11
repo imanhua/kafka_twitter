@@ -7,9 +7,9 @@ from textblob import TextBlob
 
 BOOTSTRAP_SERVERS = 'localhost:9092'
 # TOPICS = 'wks-debug-example-topic-two'
-TOPICS = 'country_twitter_stream_output'
+TOPICS = 'otravo_twitter_stream_test'
 # TOPICS = 'country_twitter_stream2'
-MAX_POLL_RECORDS = 10
+MAX_POLL_RECORDS = 500
 
 '''
 consumer = KafkaConsumer(TOPICS,
@@ -19,7 +19,8 @@ consumer = KafkaConsumer(TOPICS,
                          consumer_timeout_ms=30000)   # stop if no message after 30 seconds
 '''
 # consumer = KafkaConsumer(TOPICS, bootstrap_servers=BOOTSTRAP_SERVERS, enable_auto_commit='False', max_poll_records=10)
-consumer = KafkaConsumer(TOPICS, bootstrap_servers=BOOTSTRAP_SERVERS, auto_offset_reset='earliest',
+consumer = KafkaConsumer(TOPICS, bootstrap_servers=BOOTSTRAP_SERVERS,
+                         # auto_offset_reset='earliest',
                          consumer_timeout_ms=30000)
 # metrics = consumer.metrics()
 # print(metrics)
@@ -32,8 +33,9 @@ for message in consumer:
     #                                      message.offset, message.key,
     #                                      message.value))
     new_message = json.loads(message.value)
-    type_1 = type(new_message)
-    print(type_1, "\n")
+    # type_1 = type(new_message)
+    print(count, '  ',new_message)
+    # print(type_1, "\n")
     # for country in pycountry.countries:
     #     if country.name in clean_message."text"
     #         print(country.name)

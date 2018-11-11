@@ -10,9 +10,10 @@ import readconfig
 
 WORDS = ['Spain', '#Spain', 'Turkey', '#Turkey', 'Italy', '#Italy']
 # PARTITION = "Asia"
-TOPICS = "otravo_twitter_stream"
-# TOPICS = "country_twitter_stream2"
-BOOTSTRAP_SERVERS = 'localhost:9092'
+kafka_cfg = readconfig.read_config('kafka_config')
+topics = kafka_cfg['topics']
+# topics = "country_twitter_stream2"
+bootstrap_servers = kafka_cfg['bootstrap_servers']
 
 
 class StreamListener(tweepy.StreamListener):
@@ -31,7 +32,7 @@ class StreamListener(tweepy.StreamListener):
         """ This method is called whenever new data arrives from live stream.
         We asynchronously push this data to kafka queue"""
         try:
-            producer.send(TOPICS, data.encode('utf-8'))
+            producer.send(topics, data.encode('utf-8'))
             # producer.send(TOPICS, data.encode('utf-8'), PARTITION.encode('utf-8'))
         except Exception as e:
             print(e)
@@ -54,7 +55,8 @@ class StreamListener(tweepy.StreamListener):
 
 
 def producer_config():
-    producer_cfg = KafkaProducer(bootstrap_servers=BOOTSTRAP_SERVERS,
+
+    producer_cfg = KafkaProducer(bootstrap_servers=bootstrap_servers,
                                  acks='all',
                                  retries=sys.maxsize,
                                  max_in_flight_requests_per_connection=1,
@@ -91,4 +93,3 @@ if __name__ == '__main__':
     print("Tracking: " + str(WORDS))
 
     stream.filter(track=WORDS, languages=['en'])
-
