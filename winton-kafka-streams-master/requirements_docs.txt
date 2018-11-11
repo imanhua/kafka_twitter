@@ -1,4 +1,0 @@
-javaproperties
-requests
-avro-python3
-setuptools_scm
